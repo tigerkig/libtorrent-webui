@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>libtorrent websocket test</title>
+<script language="javascript" type="text/javascript" src="libtorrent-webui.js"></script>
+<script language="javascript" type="text/javascript" src="lt-g.js"></script>
+<script language="javascript" type="text/javascript">
+
+var conn = null;
+
+var all_stats = [];
+
+on_stats = function(updates)
+{
+	if (typeof(updates) === 'string')
+	{
+		console.log("ERROR: " + updates);
+		return;
+	}
+
+	// clear classes on all cells
+	var table = []
+	table.push(document.getElementById('stats1'));
+	table.push(document.getElementById('stats2'));
+	table.push(document.getElementById('stats3'));
+	table.push(document.getElementById('stats4'));
+	table.push(document.getElementById('stats5'));
+	for (j in table)
+	{
+		var rows = table[j].rows;
+		for (var i = 0; i < rows.length; ++i)
+		{
+			var r = rows[i];
+			var cells = r.cells;
+			for (var j = 0; j < cells.length; ++j)
+			{
+				cells[j].className = "";
+			}
+		}
+	}
+
+	for (i in updates)
+	{
+		var row = document.getElementById(i);
+		if (row == null) continue;
+		row.cells[2].textContent = updates[i];
+		row.cells[2].className = "updated";
+	}
+};
+
+window.onload = function() {
+	var url = 'ws://' + window.location.host + '/bt/control';
+	conn = new libtorrent_connection(url, function(state)
+	{
+		if (state != "OK") {
+			console.log(state);
+			return;
+		}
+
+		conn.list_stats(function(stats)
+		{
+			var table = []
+			table.push(document.getElementById('stats1'));
+			table.push(document.getElementById('stats2'));
+			table.push(document.getElementById('stats3'));
+			table.push(document.getElementById('stats4'));
+			table.push(document.getElementById('stats5'));
+			var i = 0;
+			for (s in stats)
+			{
+				var row = table[Math.floor(i/55)].insertRow(-1);
+				row.id = s;
+				row.insertCell(0).textContent = s;
+				row.insertCell(1).textContent = stats[s].type == 0 ? 'counter' : 'gauge';
+				// always assume 0 until a get_stats says differently
+				row.insertCell(2).textContent = '0';
+
+				all_stats.push(stats[s].id);
+				++i;
+			}
+
+			window.setInterval(function()
+			{
+				conn.get_stats(all_stats, on_stats);
+			}, 500);
+		});
+	});
+};
+</script>
+<style>.updated { background-color: #faa; }</style>
+<body>
+<table id="stats1" border="1" style="border-collapse: collapse; border-color: black; display: inline-block;">
+<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+</table>
+<table id="stats2" border="1" style="border-collapse: collapse; border-color: black; display: inline-block;">
+<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+</table>
+<table id="stats3" border="1" style="border-collapse: collapse; border-color: black; display: inline-block;">
+<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+</table>
+<table id="stats4" border="1" style="border-collapse: collapse; border-color: black; display: inline-block;">
+<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+</table>
+<table id="stats5" border="1" style="border-collapse: collapse; border-color: black; display: inline-block;">
+<tr><th>Name</th><th>Type</th><th>Value</th></tr>
+</table>
+<canvas id="graph" width="800" height="500"/>
+</body>
+</html>
+

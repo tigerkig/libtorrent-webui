@@ -1,0 +1,90 @@
+import modules ;
+import feature : feature ;
+
+BOOST_ROOT = [ modules.peek : BOOST_ROOT ] ;
+
+feature pam : off on : composite ;
+
+feature use-boost : system source : composite ;
+
+use-project /torrent : ../libtorrent ;
+lib sqlite : : <name>sqlite3 <search>/opt/local/lib : <include>/opt/local/include ;
+lib libiconv : : <name>iconv <link>shared <search>/usr/local/lib ;
+
+if $(BOOST_ROOT)
+{
+	use-project /boost : $(BOOST_ROOT) ;
+}
+
+SOURCES =
+	webui
+	transmission_webui
+	utorrent_webui
+	libtorrent_webui
+	json_util
+	file_downloader
+	torrent_post
+	rencode
+	deluge
+	disk_space
+	base64
+	escape_json
+	auto_load
+	save_settings
+	save_resume
+	torrent_history
+	auth
+	no_auth
+	auth_localhost
+	load_config
+	http_whitelist
+	error_logger
+	websocket_handler
+	rss_filter
+	alert_handler
+	file_requests
+	stats_logging
+	;
+
+lib torrent-webui
+	: # sources
+	src/$(SOURCES).cpp src/mongoose.c src/jsmn.c src/cdecode.c
+
+	: # requirements
+	<library>/torrent//torrent/<crypto>openssl
+	<library>zlib
+	<library>sqlite
+#	<library>libiconv
+	<pam>on:<library>pam
+	<pam>on:<source>src/pam_auth.cpp
+	<define>USE_WEBSOCKET=1
+
+	: # default build
+	<link>static
+
+	: # usage-requirements
+	<include>src
+	<target-os>linux:<library>pthread
+	<target-os>linux:<library>rt
+	<target-os>linux:<library>dynamic-linker
+	;
+
+lib zlib : : <name>z <search>/usr/local/lib ;
+lib pthread : : <name>pthread <search>/usr/local/lib <link>shared ;
+lib rt : : <name>rt <search>/usr/local/lib <link>shared ;
+lib pam : : <name>pam <search>/usr/local/lib ;
+lib dynamic-linker : : <name>dl <link>shared ;
+
+exe webui_test : test.cpp : <library>torrent-webui <library>/torrent//torrent ;
+
+exe add_user : tools/add_user.cpp : <library>torrent-webui <library>/torrent//torrent ;
+exe snmp_test : snmp.cpp
+	: <library>/torrent//torrent
+	<library>torrent-webui
+	<include>src
+	<linkflags>"-L/opt/local/lib -L/opt/local/lib -L/opt/local/lib -lnetsnmpmibs -lnetsnmpagent -lnetsnmp -lcrypto" ;
+
+explicit snmp_test ;
+
+install stage_add_user : add_user : <location>. ;
+
